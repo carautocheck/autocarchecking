@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: autocarchecking
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: CARSXE_API_KEY
+        sync: false
