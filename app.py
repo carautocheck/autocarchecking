@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import requests
 import os
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -105,10 +106,9 @@ VEHICLE REPORT
 ==========================================
 {report_text}
 """
-    send_email(to=OWNER_EMAIL, subject=f"New Order - {name} - {vin}", body=owner_msg)
-
-    client_msg = f"""
-Dear {name},
+    def send_emails_background():
+        send_email(to=OWNER_EMAIL, subject=f"New Order - {name} - {vin}", body=owner_msg)
+        client_msg = f"""Dear {name},
 
 Thank you for your order at AutoCarChecking.com!
 
@@ -121,9 +121,12 @@ Your vehicle history report is ready below.
 Questions? Contact us at support@autocarchecking.com
 
 Best regards,
-AutoCarChecking.com Team
-"""
-    send_email(to=client_email, subject=f"Your Vehicle History Report - {vin}", body=client_msg)
+AutoCarChecking.com Team"""
+        send_email(to=client_email, subject=f"Your Vehicle History Report - {vin}", body=client_msg)
+
+    thread = threading.Thread(target=send_emails_background)
+    thread.daemon = True
+    thread.start()
 
     return jsonify({'success': True, 'message': 'Order processed!'})
 
