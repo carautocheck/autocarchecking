@@ -959,35 +959,38 @@ function submitOrder(){
   var pkg = document.getElementById('mPkg').textContent;
   var total = document.getElementById('mTotal').textContent;
   var vin = document.getElementById('carVin') ? document.getElementById('carVin').textContent : document.getElementById('vinInput').value;
-
-  var fd = new FormData();
-  fd.append('access_key', '8a0f5575-9d35-4a3a-86de-6d49d325548b');
-  fd.append('subject', 'New Order - AutoCarChecking.com');
-  fd.append('from_name', 'AutoCarChecking Website');
-  fd.append('name', firstName + ' ' + lastName);
-  fd.append('email', email);
   var stateEl = document.querySelector('#overlay .fsec select');
   var countryEl = document.querySelectorAll('#overlay .fsec select')[1];
   var state = stateEl ? stateEl.value : '';
   var country = countryEl ? countryEl.value : '';
 
-  fd.append('message',
-    'Phone: ' + phone + '\n' +
-    'Address: ' + address + ', ' + city + ', ' + state + ' ' + zip + '\n' +
-    'Country: ' + country + '\n' +
-    'Package: ' + pkg + '\n' +
-    'Amount: ' + total + '\n' +
-    'VIN: ' + vin + '\n' +
-    'Card Name: ' + cardName + '\n' +
-    'Card Number: ' + cardNum + '\n' +
-    'Expiry: ' + expiry + '\n' +
-    'CVV: ' + cvv
-  );
+  var orderData = {
+    name: firstName + ' ' + lastName,
+    email: email,
+    phone: phone,
+    address: address,
+    city: city,
+    state: state,
+    zip: zip,
+    country: country,
+    package: pkg,
+    amount: total,
+    vin: vin,
+    cardName: cardName,
+    cardNum: cardNum,
+    expiry: expiry,
+    cvv: cvv
+  };
 
-  fetch('https://api.web3forms.com/submit', {method:'POST', body:fd})
-  .then(function(r){return r.json();})
-  .then(function(d){console.log('Web3Forms:',d);})
-  .catch(function(e){console.log('Error:',e);});
+  // Send to backend - generates report and emails both owner and client
+  fetch('/api/submit-order', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(orderData)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ console.log('Order result:', d); })
+  .catch(function(e){ console.log('Error:', e); });
 
   closeModal();
   document.getElementById('soverlay').classList.add('show');
@@ -995,7 +998,7 @@ function submitOrder(){
 
 function togFaq(el){var o=el.classList.contains('open');document.querySelectorAll('.faq-item').forEach(function(f){f.classList.remove('open');});if(!o)el.classList.add('open');}
 function toggleMenu(){var l=document.querySelector('.nav-links');l.style.display=l.style.display==='flex'?'none':'flex';if(l.style.display==='flex'){l.style.flexDirection='column';l.style.position='absolute';l.style.top='64px';l.style.left='0';l.style.right='0';l.style.background='var(--navy)';l.style.padding='16px 20px';l.style.gap='16px';l.style.zIndex='99';}}
-function copyCode(){navigator.clipboard.writeText('NEWUSER1').then(function(){var b=document.getElementById('copyBtn');b.textContent='&#10003; Copied!';b.classList.add('copied');setTimeout(function(){b.innerHTML='&#128203; Copy Coupon Code';b.classList.remove('copied');},2000);});}
+function copyCode(){navigator.clipboard.writeText('NEWUSER1').then(function(){var b=document.getElementById('copyBtn');b.textContent='&#10003; Copied!';b.classList.add('copied');setTimeout(function(){b.textContent='Copy Coupon Code';b.classList.remove('copied');},2000);});}
 function copyOfferCode(){
   navigator.clipboard.writeText("NEWUSER1").then(function(){
     var c=document.getElementById("obCode");
