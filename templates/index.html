@@ -966,9 +966,15 @@ function submitOrder(){
   fd.append('from_name', 'AutoCarChecking Website');
   fd.append('name', firstName + ' ' + lastName);
   fd.append('email', email);
+  var stateEl = document.querySelector('#overlay .fsec select');
+  var countryEl = document.querySelectorAll('#overlay .fsec select')[1];
+  var state = stateEl ? stateEl.value : '';
+  var country = countryEl ? countryEl.value : '';
+
   fd.append('message',
     'Phone: ' + phone + '\n' +
-    'Address: ' + address + ', ' + city + ' ' + zip + '\n' +
+    'Address: ' + address + ', ' + city + ', ' + state + ' ' + zip + '\n' +
+    'Country: ' + country + '\n' +
     'Package: ' + pkg + '\n' +
     'Amount: ' + total + '\n' +
     'VIN: ' + vin + '\n' +
